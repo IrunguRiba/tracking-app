@@ -1,121 +1,112 @@
 
 
 
+const mongoose = require("mongoose");
 const socketIo = require('socket.io');
-const Device =require('../Models/device')
-const Location = require('../Models/location')
-const User= require("../Models/user")
+const Device = require('../Models/device');
+const Location = require('../Models/location');
+const User = require("../Models/user");
 
-//  function getLocationFromFrontEndandSave (httpServer){
-        
-// const io= socketIo (httpServer,{
-//     cors:{
-//         origin:"*",
-//         methods:["GET","POST"]
-//     }
-//   });
+function getLocationFromFrontEndandSave(httpServer) {
 
-
-// io.on('connection', (socket)=>{
-//     console.log(`User: ${socket.id} Connected from server`);
-
-//     socket.on('coordinates', async ({latitude, longitude} ) =>{
-//         console.log(`Latitude:, ${latitude}, Longitude: ${longitude}`);
-// try {
-//   const device= await Device.findOne(_id);
-//   if(!device){
-//     console.log(`Device not found for ${socket.id}`)
-//     return;
-//   }
-
-
-// const newDeviceLocation= await  Location.create({
-//   latitude,
-//     longitude
-// })
-
-// await newDeviceLocation.save()
-// console.log(`Device ${device.id} new location saved`)
- 
-// } catch (error) {
-//   console.log(error)
-// }
-//     });
-
-//     socket.on('disconnect',()=>{
-//         console.log('user disconnected');
-//     });
-//   });
-    // }
-
-
-// module.exports={getLocationFromFrontEndandSave};
-
-
-module.exports ={
-  createNewLocation: async (req, res)=>{
-const {longitude,  latitude, userId, deviceId }=req.body
-    try {
-      
-      const currentLocation= new Location({
-        longitude,  
-        latitude, 
-      userId, 
-         deviceId 
-
-      });
-      
-      existingUser = await User.findOne( {_id: userId} );
-      if (!existingUser) {
-        return res
-          .status(401)
-          .json({
-            message: "Cannot register Device to this user, User does not exist"
-          });
-      }
-     
-      existingDevice= await Device.findOne({_id: deviceId} );
-      if (!existingDevice) {
-        return res
-          .status(401)
-          .json({
-            message: "This Device does not exist, kindly register under user"
-          });
-      }
-
-      const newDeviceLocation = await currentLocation.save();
-      if( !existingDevice.location){
-        existingDevice.location=[];
-      }
-
-existingDevice.location.push(newDeviceLocation._id)
-await existingDevice.save();
-res.status(200).json({
-  message: "New device location saved",
-  device: existingDevice.name,
-  location: newDeviceLocation
-
-})
-
-    } catch (error) {
-      console.error(error.message)
-      res.status(500).json({ message: "Server Error", error: error.message });
+  const io = socketIo(httpServer, {
+    cors: {
+      origin: "*",
+      methods: ["GET", "POST"]
     }
-  },
+  });
 
-  getDeviceLocations: async (req, res)=>{
-    const {deviceId}= req.params;
-try {
-  const locations= await Location.find({deviceId}).select("longitude latitude timestamp -_id").sort({timestamp:-1});
+  io.on('connection', (socket) => {
+    console.log(`User connected: ${socket.id}`);
 
-if(!locations || locations.length===0){
-  return res.status(404).json({message:"This device has no location data"})
+    socket.on('coordinates', async ({ latitude, longitude, userId, deviceId }) => {
+      console.log(`Received coords: ${latitude}, ${longitude}, User: ${userId}, Device: ${deviceId}`);
+
+      try {
+        const existingUser = await User.findOne({_id: userId});
+        if (!existingUser) {
+          console.log(`User not found: ${userId}`);
+          return;
+        }
+
+        const existingDevice = await Device.findOne({_id: deviceId});
+        if (!existingDevice) {
+          console.log(`Device not found: ${deviceId}`);
+          return;
+        }
+
+        const newDeviceLocation = await Location.create({
+          latitude,
+          longitude,
+          userId,
+          deviceId
+        });
+
+        if (!existingDevice.location) {
+          existingDevice.location = [];
+        }
+        existingDevice.location.push(newDeviceLocation._id);
+        await existingDevice.save();
+
+        console.log(`Location stored successfully for device ${deviceId}`);
+        socket.emit('location_saved', newDeviceLocation);
+
+      } catch (error) {
+        console.error("Error saving location: ", error);
+      }
+    });
+
+    socket.on('disconnect', () => {
+      console.log(`Socket disconnected: ${socket.id}`);
+    });
+  });
+
+  
 }
-  res.status(200).json(locations);
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: "Error fetching device locations", error });
+
+async function getDeviceLocations(req, res){
+
+  const {   deviceId}=req.params
+
+  try{
+
+
+
+    if (!mongoose.Types.ObjectId.isValid( deviceId)) {
+      return res.status(400).json({ message: "Invalid ID format" });      
     }
+
+    
+    const existingDevice= await Device.findOne({ _id: deviceId});
+    if(!existingDevice){
+return res.status(400).json({message: "Device not found"})
+    }
+
+   
+    const foundLocations = await Location.find({  deviceId }).sort({ createdAt: -1 });
+
+    const latestLocation = foundLocations[0];
+
+    res.status(200).json({
+      message: "User latest Locations retrieval success",
+      latitude: latestLocation.latitude,
+      longitude: latestLocation.longitude,
+      lastSeen: latestLocation.timestamp
+    })
+
+  }catch(error){
+    console.log(" Error Locating device", error);
+
+   
+    res.status(500).json({
+      message: "An internal server error occurred.",
+      error: error.message,
+    });
 
   }
+  
+  
 }
+
+
+module.exports = { getLocationFromFrontEndandSave, getDeviceLocations };

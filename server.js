@@ -7,7 +7,7 @@ const cors = require("cors");
 const bodyParser = require("body-parser");
 const router = require("./src/Routes/userRoutes");
 const deviceRouter = require("./src/Routes/deviceRoute");
-// const {getLocationFromFrontEndandSave}=require("./src/Controllers/locationController");
+const {getLocationFromFrontEndandSave}=require("./src/Controllers/locationController");
 const locationRouter= require("./src/Routes/locationRouter")
 const http = require("http")
 const httpServer=http.createServer(app);
@@ -22,6 +22,14 @@ const dotenv = require("dotenv");
 
 dotenv.config();
 
+app.use(cors(
+  {
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE"]
+  }
+));
+
+
 const PORT = process.env.PORT || 4000;
 
 mongoose
@@ -29,7 +37,7 @@ mongoose
   .then(() => console.log("MongoDB connected"));
 
  
-// getLocationFromFrontEndandSave(httpServer);
+getLocationFromFrontEndandSave(httpServer);
 
 app.use('/api', router);
 app.use('/api/devices', deviceRouter);

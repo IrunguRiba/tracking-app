@@ -147,5 +147,11 @@ module.exports = {
     } catch (error) {
       res.status(500).json({ message: "Error fetching users", error: error.message });
     }
+  },
+
+
+  deleteUsers: async (req, res)=>{
+
+    
   }
 };
