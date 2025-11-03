@@ -1,11 +1,10 @@
 const express=require("express");
 const deviceRouter = require("express").Router();
 
-const { createDevice, getDevices, updateDeviceInfo, deleteDevice, getDeviceById } = require("../Controllers/deviceController");
-deviceRouter.post("/newDevice", createDevice);
-deviceRouter.get("/getDevices", getDevices);
-deviceRouter.get("/getDevice/:_id", getDeviceById)
-deviceRouter.put('/update/:_id', updateDeviceInfo)
-deviceRouter.delete('/delete/:_id', deleteDevice)
+const { registerMyDevice, getMyDeviceInfo, updateMyDevice, deleteMyDevice } = require("../Controllers/deviceController");
+deviceRouter.post("/registerMyDevice", registerMyDevice);
+deviceRouter.get("/getMyDeviceInfo/:_id", getMyDeviceInfo);
+deviceRouter.put('/updateMyDevice/:_id', updateMyDevice);
+deviceRouter.delete('/deleteMyDevice/:_id', deleteMyDevice);
 
 module.exports=deviceRouter;

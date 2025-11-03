@@ -3,97 +3,82 @@ const User = require("../Models/user");
 const Locations = require("../Models/location");
 const mongoose = require("mongoose");
 
-
 // Create and Save a new Device
 
 module.exports = {
-  createDevice: async (req, res) => {
-    const { name, type, model, description, userId } = req.body;
+  registerMyDevice: async (req, res) => {
+    const { userId, name, type, model, description} = req.body;
     try {
+    
+        
+        const existingUser = await User.findById(userId);
+      if (!existingUser) {
+        return res.status(401).json({
+          message: "Cannot register Device to this user, User does not exist",
+        });
+      }
+      console.log("User deviceInfo value:", existingUser.deviceInfo);
+
+      if (existingUser.deviceInfo) {
+        return res.status(400).json({
+          message: "You already have a registered device",
+          existingDevice: existingUser.deviceInfo
+        });
+      }
+      
+
       const newDevice = new Device({
         name,
         type,
         model,
-        description,
-        user: userId,
+        description
       });
-      const existingUser = await User.findOne({ _id: userId });
-      if (!existingUser) {
-        return res.status(401).json({
-          message: "Cannot register Device to this user, User does not exist"
-        });
-      }
+     
 
       const savedDevice = await newDevice.save();
 
-      existingUser.devices.push(savedDevice._id);
+      existingUser.deviceInfo = savedDevice._id;
       await existingUser.save();
-      await existingUser.populate("devices");
-
+      await existingUser.populate("deviceInfo");
 
       res.status(201).json({
-        message: "Device created success",
-        savedDevice,
-        user: existingUser.userName,
+        message: "Device Registered success",
+        myDevice: savedDevice,
+        User: existingUser.userName,
       });
     } catch (error) {
       console.error(error);
 
       res.status(500).json({ message: "Error creating device", error });
-      
     }
   },
 
-
-
-  getDevices: async (req, res) => {
-
+  getMyDeviceInfo: async (req, res) => {
+    const { _id } = req.params;
     try {
-      
-      const isUserAdmin= await User.findOne({ isAdmin : true})
-      if (!isUserAdmin) {
-        return res.status(403).json({ message: "Unauthorized! Admin only." });
-      }
-
-      const devices = await Device.find().populate("user", "userName email").populate("location", "longitude latitude timestamp");
-
-      res.status(200).json({
-        message:"All devices found for all users and locations",
-        DevicesOwned: devices
-      
-      });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: "Error fetching devices", error });
-    }
-  },
-
-
-
-
-  getDeviceById: async (req, res) => {
-    const { _id} = req.params;
-    try {
-
       if (!mongoose.Types.ObjectId.isValid(_id)) {
-        return res.status(400).json({ message: "Invalid ID format" });      
+        return res.status(400).json({ message: "Invalid ID format" });
       }
 
       
-      const isUserAdmin= await User.findOne({ isAdmin : true})
-      if (!isUserAdmin) {
-        return res.status(403).json({ message: "Unauthorized! Admin only." });
-      }
-      const requestedDevice = await Device.findById({ _id }).populate("user", "userName email").populate("location", "longitude latitude timestamp");
+      const requestedDevice = await Device.findById({ _id })
+        .populate("location", "longitude latitude timestamp")
 
       if (!requestedDevice) {
         console.log("Device not found");
-        return res.status(404).json({ message: `Device ${ _id} not found` });
-       
+        return res.status(404).json({ message: `Device ${_id} not found` });
+      }
+
+      if(requestedDevice.location && requestedDevice.location.length>0){
+        requestedDevice.location.sort((lastestTime, lastTime)=>{
+          return lastTime.timestamp-lastestTime.timestamp
+
+        })
       }
       res.status(200).json({
         message: "Device found successifully",
         Device: requestedDevice,
+        LatestLocation: requestedDevice.location[0] || null
       });
     } catch (error) {
       console.error("Error fetching device", error);
@@ -105,22 +90,21 @@ module.exports = {
     }
   },
 
-
-  updateDeviceInfo: async (req, res) => {
-    const {_id } = req.params;
+  updateMyDevice: async (req, res) => {
+    const { _id } = req.params;
     const updateData = req.body;
 
     try {
-
       if (!mongoose.Types.ObjectId.isValid(_id)) {
-        return res.status(400).json({ message: "Invalid ID format" });      
+        return res.status(400).json({ message: "Invalid ID format" });
       }
 
       const updatedDevice = await Device.findOneAndUpdate(
         { _id },
         { $set: updateData },
         { new: true }
-      ).populate("user", "userName email").populate("location", "longitude latitude timestamp");
+      )
+        .populate("location", "longitude latitude timestamp");
 
       if (!updatedDevice) {
         return res.status(404).json({
@@ -141,35 +125,28 @@ module.exports = {
     }
   },
 
-
-
-
-  deleteDevice: async (req, res) => {
-    const {  _id  } = req.params;
+  deleteMyDevice: async (req, res) => {
+    const { _id } = req.params;
 
     try {
-      const existingDevice = await Device.findOneAndDelete({  _id  }).populate("location", "longitude latitude timestamp");
+      const existingDevice = await Device.findOneAndDelete({ _id }).populate(
+        "location",
+        "longitude latitude timestamp"
+      );
 
-   if (!existingDevice) {
+      if (!existingDevice) {
         console.log("Device does not exist");
       }
-
-      await User.updateMany(
-        { devices:  _id  },
-        { $pull: { devices:  _id  } }
-      );
-      
 
       res.status(200).json({
         message: "Device deleted sucessifully",
         DeletedDevice: existingDevice,
       });
-
     } catch (error) {
       console.error("Error deleting device", error);
 
-      if (!mongoose.Types.ObjectId.isValid( _id )) {
-        return res.status(400).json({ message: "Invalid ID format" });      
+      if (!mongoose.Types.ObjectId.isValid(_id)) {
+        return res.status(400).json({ message: "Invalid ID format" });
       }
 
       res.status(500).json({
@@ -177,5 +154,5 @@ module.exports = {
         error: error.message,
       });
     }
-  }
+  },
 };

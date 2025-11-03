@@ -37,10 +37,23 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
-  devices: {
-    type: [{ type: mongoose.Schema.Types.ObjectId, ref: "Device" }],
-    default: [],
+  deviceInfo: {
+    type: mongoose.Schema.Types.ObjectId, ref: "Device", default: null 
   },
+  pin:{
+    type: String,
+    required: false,
+    unique: true,
+  }
+});
+
+
+//This will generate a pin on create of a user
+userSchema.pre("save", async function (next) {
+  if (!this.pin) {
+    this.pin = Math.floor(100000 + Math.random() * 900000).toString();
+  }
+  next();
 });
 
 const User = mongoose.model("User", userSchema);

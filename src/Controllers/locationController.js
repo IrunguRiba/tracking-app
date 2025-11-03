@@ -48,7 +48,7 @@ function getLocationFromFrontEndandSave(httpServer) {
         existingDevice.location.push(newDeviceLocation._id);
         await existingDevice.save();
 
-        console.log(`Location stored successfully for device ${deviceId}`);
+        console.log(`Location stored successfully for user: ${userId},  device ${deviceId}`);
         socket.emit('location_saved', newDeviceLocation);
 
       } catch (error) {
@@ -66,7 +66,7 @@ function getLocationFromFrontEndandSave(httpServer) {
 
 async function getDeviceLocations(req, res){
 
-  const {   deviceId}=req.params
+  const {deviceId}=req.params
 
   try{
 

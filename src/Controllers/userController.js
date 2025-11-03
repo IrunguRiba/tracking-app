@@ -1,4 +1,6 @@
 const express = require("express");
+const Device = require("../Models/device");
+const mongoose= require("mongoose");
 const {
   userSchema,
   logInSchema,
@@ -148,10 +150,76 @@ module.exports = {
       res.status(500).json({ message: "Error fetching users", error: error.message });
     }
   },
-
-
-  deleteUsers: async (req, res)=>{
-
-    
+ getUserByPin: async (req, res) => {
+const { pin } = req.params;
+try{
+  const requestedUser= await User.findOne({ pin: pin }).populate({
+    path: 'deviceInfo',
+        select: 'name model type description status location',
+        populate: {
+          path: 'location',
+          select: 'latitude longitude timestamp -_id', 
+        }
+  });
+  if (!requestedUser) {
+    return res.status(404).json({ message: "User not found" });
   }
+  const device = requestedUser.deviceInfo;
+  if (device && Array.isArray(device.location) && device.location.length > 0) {
+    device.location.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  }
+  
+  
+const userIsAt=requestedUser.deviceInfo?.location?.[0] || "User location unavailable"
+      res.status(200).json({
+        message: "User found successfully",
+        User: requestedUser,
+        LatestLocation: userIsAt? [userIsAt] : []
+      });
+} catch (error) {
+  console.error("Error fetching user by pin", error);
+  res.status(500).json({ message: "Error fetching user by pin", error });
+}
+ },
+ getUserById: async (req, res)=>{
+  const {_id}= req.params;
+
+  try {
+    const existingUser= await User.findById(_id).populate({
+      path: 'deviceInfo',
+          select: 'name model type description status location',
+          populate: {
+            path: 'location',
+            select: 'latitude longitude timestamp -_id', 
+          }
+    });
+
+    if(!existingUser){
+      res.status(401).json({message: "User not found"})
+    }
+
+    const device = existingUser.deviceInfo;
+  if (device && Array.isArray(device.location) && device.location.length > 0) {
+    device.location.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  }
+  
+  
+const userIsAt=existingUser.deviceInfo?.location?.[0] || "User location unavailable"
+    
+    res.status(200).json({
+      message: "User found successfully",
+      user: existingUser,
+      LatestLocation: userIsAt? [userIsAt] : []
+    });
+  } catch (error) {
+    
+    res.status(400).json({
+      message: "Something went wrong, couldn't get user by id",
+      error: error.message,
+      
+    })
+    console.log(error)
+  }
+
+ }
 };

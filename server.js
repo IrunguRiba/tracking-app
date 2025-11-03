@@ -12,6 +12,12 @@ const locationRouter= require("./src/Routes/locationRouter")
 const http = require("http")
 const httpServer=http.createServer(app);
 
+app.use(cors(
+  {
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE"]
+  }
+));
 
 
 app.use(express.json());
@@ -22,12 +28,6 @@ const dotenv = require("dotenv");
 
 dotenv.config();
 
-app.use(cors(
-  {
-    origin: "*",
-    methods: ["GET", "POST", "PUT", "DELETE"]
-  }
-));
 
 
 const PORT = process.env.PORT || 4000;

@@ -13,25 +13,20 @@ name:{
 },
 type:{
     type:mongoose.Schema.Types.Mixed,
-    required:false
+    required:true
 },
 model:{
     type:mongoose.Schema.Types.Mixed,
-    required:false
+    required:true
 },
 description:{
     type:mongoose.Schema.Types.Mixed,
-    required:false
+    required:true
 },
 location:[{
     type:mongoose.Schema.Types.ObjectId,
     ref:'Location',
 }],
-user:{
-    type:mongoose.Schema.Types.ObjectId,
-    ref:'User',
-    required:true
-},
 status:{
     type:String,
     enum:['active','inactive'],
