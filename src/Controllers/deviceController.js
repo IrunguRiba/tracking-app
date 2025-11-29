@@ -66,7 +66,7 @@ const deviceExists = deviceArray.some(device =>
 
       
       const requestedDevice = await Device.findById({ _id })
-        .populate("location", "longitude latitude timestamp")
+        .populate("location", "longitude latitude timestamp").populate("deviceInfo");
 
       if (!requestedDevice) {
         console.log("Device not found");
